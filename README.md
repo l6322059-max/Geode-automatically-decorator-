@@ -10,7 +10,7 @@ A Geode mod project for Geometry Dash, targeting Android 64-bit and Windows 64-b
 - Glow/effect presets
 - Undo support
 
-## Current status
+## Current status\n\nThe mod now adds an Auto Decorator X shortcut button directly inside the Geometry Dash level editor. Tapping it opens the first menu preview with sections for style presets, color themes, glow effects, and decorating selected objects. These controls are UI placeholders for now: automatic decoration and level-object editing are not implemented yet.\n
 This commit establishes the Geode project structure, mod metadata, a main-menu entry point, and CI builds. The actual editor-side decoration engine is **not implemented yet**; the menu button currently opens a status panel and does not modify levels.
 
 ## Build
