@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/EditorUI.hpp>
+#include <Geode/utils/web.hpp>
 
 using namespace geode::prelude;
 
@@ -10,6 +11,7 @@ class $modify(AutoDecoratorEditorUI, EditorUI) {
         bool pulse = false;
         bool particles = false;
         bool outline = true;
+        TaskHolder<web::WebResponse> aiRequest;
     };
 
     bool init(LevelEditorLayer* editorLayer) {
@@ -17,7 +19,6 @@ class $modify(AutoDecoratorEditorUI, EditorUI) {
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
 
-        // Small FX shortcut in the level editor.
         auto shortcutMenu = CCMenu::create();
         shortcutMenu->setID("auto-decorator-x-shortcut-menu"_spr);
         shortcutMenu->setPosition({ 42.f, winSize.height * 0.55f });
@@ -31,8 +32,6 @@ class $modify(AutoDecoratorEditorUI, EditorUI) {
         shortcutMenu->addChild(shortcut);
         this->addChild(shortcutMenu, 1000);
 
-        // Effects panel. The toggles are real interactive controls;
-        // applying them to level objects will be added with the decoration engine.
         auto panel = CCLayerColor::create({ 20, 25, 48, 235 }, 250.f, 205.f);
         panel->setID("auto-decorator-x-effects-panel"_spr);
         panel->setPosition({ 72.f, winSize.height * 0.5f - 100.f });
@@ -53,6 +52,15 @@ class $modify(AutoDecoratorEditorUI, EditorUI) {
         addEffectRow(effectsMenu, "Particles", 3, 71.f, false);
         addEffectRow(effectsMenu, "Outline", 4, 34.f, true);
 
+        auto aiLabel = CCLabelBMFont::create("AI SUGGEST", "bigFont.fnt");
+        aiLabel->setScale(0.38f);
+        auto aiButton = CCMenuItemSpriteExtra::create(
+            aiLabel, this,
+            menu_selector(AutoDecoratorEditorUI::onRequestAISuggestion)
+        );
+        aiButton->setPosition({ 92.f, 12.f });
+        effectsMenu->addChild(aiButton);
+
         auto closeLabel = CCLabelBMFont::create("CLOSE", "bigFont.fnt");
         closeLabel->setScale(0.42f);
         auto closeButton = CCMenuItemSpriteExtra::create(
@@ -70,7 +78,6 @@ class $modify(AutoDecoratorEditorUI, EditorUI) {
         label->setScale(0.48f);
         label->setAnchorPoint({ 0.f, 0.5f });
         label->setPosition({ 28.f, y });
-        // Labels are attached to the panel separately by using the menu's parent.
         menu->getParent()->addChild(label);
 
         auto toggler = CCMenuItemToggler::createWithStandardSprites(
@@ -84,9 +91,37 @@ class $modify(AutoDecoratorEditorUI, EditorUI) {
 
     void onToggleEffectsPanel(CCObject*) {
         auto panel = this->getChildByID("auto-decorator-x-effects-panel"_spr);
-        if (panel) {
-            panel->setVisible(!panel->isVisible());
-        }
+        if (panel) panel->setVisible(!panel->isVisible());
+    }
+
+    void onRequestAISuggestion(CCObject*) {
+        auto request = web::WebRequest();
+        request.header("Content-Type", "application/json");
+        request.timeout(std::chrono::seconds(30));
+        request.bodyString(
+            R"({"style":"modern","description":"Suggest a balanced Geometry Dash level decoration palette and effects preset."})"
+        );
+
+        m_fields->aiRequest.spawn(
+            request.post("https://geode-automatically-decorator.l6322059.workers.dev/api/decorate"),
+            [this](web::WebResponse response) {
+                auto body = response.string().unwrapOr("The server returned an unreadable response.");
+                if (!response.ok()) {
+                    FLAlertLayer::create(
+                        "Auto Decorator X",
+                        fmt::format("AI request failed (HTTP {}).\n{}", response.code(), body),
+                        "OK"
+                    )->show();
+                    return;
+                }
+
+                FLAlertLayer::create(
+                    "AI Decoration Suggestion",
+                    body,
+                    "OK"
+                )->show();
+            }
+        );
     }
 
     void onEffectToggled(CCObject* sender) {
