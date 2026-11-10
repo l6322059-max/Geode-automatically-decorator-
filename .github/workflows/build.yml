@@ -1,0 +1,41 @@
+name: Build Geode mod
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Android 64-bit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Android64 package
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          target: Android64
+      - name: Upload Android64 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Auto-Decorator-X-Android64
+          path: ${{ steps.build.outputs.build-output }}/*.geode
+          if-no-files-found: error
+
+  build-windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Win64 package
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          target: Win64
+      - name: Upload Win64 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Auto-Decorator-X-Windows-x64
+          path: ${{ steps.build.outputs.build-output }}/*.geode
+          if-no-files-found: error
