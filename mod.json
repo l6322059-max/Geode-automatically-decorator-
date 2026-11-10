@@ -1,16 +1,46 @@
 {
   "geode": "5.11.2",
-  "gd": {"win":"2.2081","android":"2.2081"},
-  "id":"l6322059-max.auto-decorator",
-  "name":"Auto Decorator X",
-  "version":"1.0.0",
-  "developer":"Rick the Rich",
-  "description":"Smart decoration assistant for the Geometry Dash editor. Early project scaffold.",
-  "settings":[
-    {"id":"smart-mode","name":"Smart mode","description":"Enable smart decoration suggestions.","type":"bool","default":true},
-    {"id":"one-click","name":"One-click decorate","description":"Enable the one-click workflow.","type":"bool","default":true},
-    {"id":"glow","name":"Glow effects","description":"Allow glow effects in decoration presets.","type":"bool","default":true},
-    {"id":"density","name":"Decoration density","description":"Target decoration density.","type":"int","default":50,"min":0,"max":100},
-    {"id":"color-theme","name":"Color theme","description":"Decoration color theme.","type":"string","default":"cyan"}
-  ]
+  "gd": {
+    "win": "2.2081",
+    "android": "2.2081"
+  },
+  "id": "l6322059-max.auto-decorator",
+  "name": "Auto Decorator X",
+  "version": "1.0.0",
+  "developer": "Rick the Rich",
+  "description": "Smart decoration assistant for the Geometry Dash editor. Early project scaffold.",
+  "settings": {
+    "smart-mode": {
+      "name": "Smart mode",
+      "description": "Enable smart decoration suggestions.",
+      "type": "bool",
+      "default": true
+    },
+    "one-click": {
+      "name": "One-click decorate",
+      "description": "Enable the one-click workflow.",
+      "type": "bool",
+      "default": true
+    },
+    "glow": {
+      "name": "Glow effects",
+      "description": "Allow glow effects in decoration presets.",
+      "type": "bool",
+      "default": true
+    },
+    "density": {
+      "name": "Decoration density",
+      "description": "Target decoration density.",
+      "type": "int",
+      "default": 50,
+      "min": 0,
+      "max": 100
+    },
+    "color-theme": {
+      "name": "Color theme",
+      "description": "Decoration color theme.",
+      "type": "string",
+      "default": "cyan"
+    }
+  }
 }
