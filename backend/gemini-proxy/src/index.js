@@ -52,7 +52,7 @@ export default {
     if (request.method !== "POST") return json({ error: "Use POST" }, 405);
 
     // Keep the model default in code so a dashboard variable is not required.
-    const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+    const model = "gemini-3.8-flash"; // Use a current stable model; ignore stale dashboard overrides.
     if (!env.GEMINI_API_KEY) {
       return json({ error: "Missing GEMINI_API_KEY secret. Add it under Worker Settings > Variables and Secrets > Secrets." }, 503);
     }
@@ -114,7 +114,7 @@ export default {
     }
 
     if (!upstream.ok) {
-      return json({ error: "Gemini request failed", status: upstream.status }, 502);
+      return json({ error: "Gemini request failed", upstreamStatus: upstream.status }, 502);
     }
 
     try {
