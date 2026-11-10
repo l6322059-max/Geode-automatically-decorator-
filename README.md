@@ -23,3 +23,13 @@ Copy the matching Geode package into your Geode mods folder, then restart Geomet
 ## Effect selector update
 
 The editor now includes an FX shortcut that opens a panel with interactive Glow, Pulse, Particles, and Outline toggles. These currently store selection state for the editor session and log changes; they do not yet apply visual effects to level objects. The decoration engine remains in development.
+
+
+## Gemini AI integration
+
+The selected experience is **Both**: manual suggestions and assisted automatic decoration with a preview and explicit Apply confirmation.
+
+- Integration architecture: [docs/GEMINI_AI_INTEGRATION.md](docs/GEMINI_AI_INTEGRATION.md)
+- Secure Gemini proxy starter: [backend/gemini-proxy/README.md](backend/gemini-proxy/README.md)
+
+The proxy starter is not deployed and the Geode client is not connected to it yet. The Gemini API key must be stored as an encrypted server secret, never in this repository or inside the mod. The decoration engine and Undo implementation still need to be completed and tested.
