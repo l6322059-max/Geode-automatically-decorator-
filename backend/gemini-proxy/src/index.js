@@ -27,7 +27,10 @@ const responseSchema = {
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: JSON_HEADERS
+    headers: {
+      ...JSON_HEADERS,
+      "access-control-allow-origin": "*"
+    }
   });
 }
 
@@ -47,8 +50,11 @@ export default {
     const url = new URL(request.url);
     if (url.pathname !== "/api/decorate") return json({ error: "Not found" }, 404);
     if (request.method !== "POST") return json({ error: "Use POST" }, 405);
-    if (!env.GEMINI_API_KEY || !env.GEMINI_MODEL) {
-      return json({ error: "Server AI configuration is missing" }, 503);
+
+    // Keep the model default in code so a dashboard variable is not required.
+    const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+    if (!env.GEMINI_API_KEY) {
+      return json({ error: "Missing GEMINI_API_KEY secret. Add it under Worker Settings > Variables and Secrets > Secrets." }, 503);
     }
 
     const declaredLength = Number(request.headers.get("content-length") || 0);
@@ -85,7 +91,7 @@ export default {
     ].join("\n");
 
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
-      + encodeURIComponent(env.GEMINI_MODEL) + ":generateContent";
+      + encodeURIComponent(model) + ":generateContent";
 
     let upstream;
     try {
@@ -111,12 +117,11 @@ export default {
       return json({ error: "Gemini request failed", status: upstream.status }, 502);
     }
 
-    let result;
     try {
-      result = await upstream.json();
-      const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Missing model output");
-      const plan = JSON.parse(text);
+      const result = await upstream.json();
+      const output = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!output) throw new Error("Missing model output");
+      const plan = JSON.parse(output);
       const hex = /^#[0-9a-fA-F]{6}$/;
       for (const key of ["primary", "secondary", "accent", "background"]) {
         if (typeof plan.palette?.[key] !== "string" || !hex.test(plan.palette[key])) {
