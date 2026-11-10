@@ -3,5 +3,5 @@ main = "backend/gemini-proxy/src/index.js"
 compatibility_date = "2026-11-10"
 
 [vars]
-# Set GEMINI_MODEL as a Worker variable in Cloudflare.
+GEMINI_MODEL = "gemini-2.5-flash"
 # Store GEMINI_API_KEY as an encrypted Worker secret, never in this file.
