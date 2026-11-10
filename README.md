@@ -18,3 +18,8 @@ The GitHub Actions workflow builds installable Geode packages for Android64 and 
 
 ## Install
 Copy the matching Geode package into your Geode mods folder, then restart Geometry Dash.
+
+
+## Effect selector update
+
+The editor now includes an FX shortcut that opens a panel with interactive Glow, Pulse, Particles, and Outline toggles. These currently store selection state for the editor session and log changes; they do not yet apply visual effects to level objects. The decoration engine remains in development.
