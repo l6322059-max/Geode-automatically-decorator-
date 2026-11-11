@@ -51,8 +51,8 @@ export default {
     if (url.pathname !== "/api/decorate") return json({ error: "Not found" }, 404);
     if (request.method !== "POST") return json({ error: "Use POST" }, 405);
 
-    // Use one bounded request so the game client does not wait through multiple retries.
-    const models = ["gemini-3.8-flash"];
+    // Try the preferred model, then lighter stable fallbacks if Google reports capacity pressure.
+    const models = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
     if (!env.GEMINI_API_KEY) {
       return json({ error: "Missing GEMINI_API_KEY secret. Add it under Worker Settings > Variables and Secrets > Secrets." }, 503);
     }
@@ -103,7 +103,7 @@ export default {
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
           upstream = await fetch(endpoint, {
-            signal: AbortSignal.timeout(50_000),
+            signal: AbortSignal.timeout(12_000),
             method: "POST",
             headers: {
               "content-type": "application/json",
@@ -118,7 +118,7 @@ export default {
             })
           });
         } catch (error) {
-          lastError = { status: 504, message: error?.name === "TimeoutError" ? "Gemini took too long to respond (50-second limit)" : "Could not reach Gemini" };
+          lastError = { status: 504, message: error?.name === "TimeoutError" ? "Gemini took too long to respond (12-second limit)" : "Could not reach Gemini" };
           if (attempt + 1 < maxAttempts) {
             await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
             continue;
@@ -160,7 +160,7 @@ export default {
 
     if (!upstream?.ok) {
       return json({
-        error: "Gemini is temporarily unavailable after retries and model fallback",
+        error: "Gemini is temporarily unavailable on all fallback models",
         upstreamStatus: lastError?.status || 503,
         details: lastError?.message || "No response from Gemini",
         triedModels: models
