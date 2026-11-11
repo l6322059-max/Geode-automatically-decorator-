@@ -51,8 +51,8 @@ export default {
     if (url.pathname !== "/api/decorate") return json({ error: "Not found" }, 404);
     if (request.method !== "POST") return json({ error: "Use POST" }, 405);
 
-    // Keep the model default in code so a dashboard variable is not required.
-    const model = "gemini-3.8-flash"; // Use a current stable model; ignore stale dashboard overrides.
+    // Try the primary Flash model, retry temporary capacity errors, then fall back.
+    const models = ["gemini-3.8-flash", "gemini-3.6-flash"];
     if (!env.GEMINI_API_KEY) {
       return json({ error: "Missing GEMINI_API_KEY secret. Add it under Worker Settings > Variables and Secrets > Secrets." }, 503);
     }
@@ -88,33 +88,82 @@ export default {
       "User's preferred style: " + style,
       "Level description: " + description,
       "Selected object summary: " + JSON.stringify(objectSummary)
-    ].join("\n");
+    ].join("\\n");
 
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
-      + encodeURIComponent(model) + ":generateContent";
+    let upstream = null;
+    let lastError = null;
+    let usedModel = models[0];
 
-    let upstream;
-    try {
-      upstream = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": env.GEMINI_API_KEY
-        },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema
+    for (const model of models) {
+      usedModel = model;
+      const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
+        + encodeURIComponent(model) + ":generateContent";
+      const maxAttempts = model === models[0] ? 3 : 1;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          upstream = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-goog-api-key": env.GEMINI_API_KEY
+            },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema
+              }
+            })
+          });
+        } catch {
+          lastError = { status: 502, message: "Could not reach Gemini" };
+          if (attempt + 1 < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+            continue;
           }
-        })
-      });
-    } catch {
-      return json({ error: "Could not reach Gemini" }, 502);
+          break;
+        }
+
+        if (upstream.ok) break;
+
+        let errorMessage = "Gemini request failed";
+        try {
+          const errorBody = await upstream.clone().json();
+          errorMessage = String(errorBody?.error?.message || errorMessage).slice(0, 300);
+        } catch {
+          // Keep the generic message if Google did not return JSON.
+        }
+        lastError = { status: upstream.status, message: errorMessage };
+
+        const retryable = [408, 429, 500, 502, 503, 504].includes(upstream.status);
+        if (!retryable) {
+          return json({
+            error: "Gemini request failed",
+            upstreamStatus: upstream.status,
+            details: errorMessage,
+            model
+          }, 502);
+        }
+
+        if (attempt + 1 < maxAttempts) {
+          // Exponential backoff with a small deterministic jitter.
+          const delay = Math.min(4000, 800 * (2 ** attempt)) + (attempt * 173);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
+      if (upstream?.ok) break;
+      upstream = null;
     }
 
-    if (!upstream.ok) {
-      return json({ error: "Gemini request failed", upstreamStatus: upstream.status }, 502);
+    if (!upstream?.ok) {
+      return json({
+        error: "Gemini is temporarily unavailable after retries and model fallback",
+        upstreamStatus: lastError?.status || 503,
+        details: lastError?.message || "No response from Gemini",
+        triedModels: models
+      }, 503);
     }
 
     try {
@@ -132,7 +181,7 @@ export default {
       plan.effects = Array.isArray(plan.effects)
         ? plan.effects.filter((effect) => ["glow", "pulse", "particles", "outline"].includes(effect))
         : [];
-      return json({ plan });
+      return json({ plan, model: usedModel });
     } catch {
       return json({ error: "Gemini returned an invalid decoration plan" }, 502);
     }
