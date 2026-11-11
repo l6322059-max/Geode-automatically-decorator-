@@ -97,7 +97,7 @@ class $modify(AutoDecoratorEditorUI, EditorUI) {
     void onRequestAISuggestion(CCObject*) {
         auto request = web::WebRequest();
         request.header("Content-Type", "application/json");
-        request.timeout(std::chrono::seconds(30));
+        request.timeout(std::chrono::seconds(60));
         request.bodyString(
             R"({"style":"modern","description":"Suggest a balanced Geometry Dash level decoration palette and effects preset."})"
         );
