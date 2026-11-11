@@ -88,7 +88,7 @@ export default {
       "User's preferred style: " + style,
       "Level description: " + description,
       "Selected object summary: " + JSON.stringify(objectSummary)
-    ].join("\\n");
+    ].join("\n");
 
     let upstream = null;
     let lastError = null;
