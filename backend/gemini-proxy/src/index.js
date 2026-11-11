@@ -51,8 +51,8 @@ export default {
     if (url.pathname !== "/api/decorate") return json({ error: "Not found" }, 404);
     if (request.method !== "POST") return json({ error: "Use POST" }, 405);
 
-    // Try the primary Flash model, retry temporary capacity errors, then fall back.
-    const models = ["gemini-3.8-flash", "gemini-3.6-flash"];
+    // Use one bounded request so the game client does not wait through multiple retries.
+    const models = ["gemini-3.8-flash"];
     if (!env.GEMINI_API_KEY) {
       return json({ error: "Missing GEMINI_API_KEY secret. Add it under Worker Settings > Variables and Secrets > Secrets." }, 503);
     }
@@ -98,11 +98,12 @@ export default {
       usedModel = model;
       const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
         + encodeURIComponent(model) + ":generateContent";
-      const maxAttempts = model === models[0] ? 3 : 1;
+      const maxAttempts = 1;
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
           upstream = await fetch(endpoint, {
+            signal: AbortSignal.timeout(50_000),
             method: "POST",
             headers: {
               "content-type": "application/json",
@@ -116,8 +117,8 @@ export default {
               }
             })
           });
-        } catch {
-          lastError = { status: 502, message: "Could not reach Gemini" };
+        } catch (error) {
+          lastError = { status: 504, message: error?.name === "TimeoutError" ? "Gemini took too long to respond (50-second limit)" : "Could not reach Gemini" };
           if (attempt + 1 < maxAttempts) {
             await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
             continue;
